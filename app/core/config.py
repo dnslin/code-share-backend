@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     APP_NAME: str = "Code-Share"
     DEBUG: bool = True
-    DATABASE_URL: str = "sqlite:///./codeShare.db"
+    DATABASE_URL: str = "sqlite:///./code_share.db"
     API_PORT: int = 3000
     API_HOST: str = "0.0.0.0"
 
