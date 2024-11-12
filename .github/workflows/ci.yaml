@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 检出后端代码
+      - name: 检出后端代码
+        uses: actions/checkout@v4
+
+      # 检出前端代码
+      - name: 检出前端代码
+        uses: actions/checkout@v4
+        with:
+          repository: dnslin/code-share
+          path: frontend
+
+      # 设置 Node.js 环境
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # 安装 pnpm
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      # 构建前端
+      - name: 构建前端
+        working-directory: frontend
+        run: |
+          pnpm install
+          pnpm build
+
+      # 创建 Caddyfile
+      - name: 创建 Caddyfile
+        run: |
+          echo ":80 {
+            handle /api/* {
+              reverse_proxy localhost:8000
+            }
+            handle /* {
+              root * /srv
+              try_files {path} /index.html
+              file_server
+            }
+          }" > Caddyfile
+
+      # 创建 Docker 构建上下文
+      - name: 准备 Docker 构建文件
+        run: |
+          # 创建构建目录
+          mkdir -p docker-build
+          # 复制所需文件
+          cp -r * docker-build/ || true
+          cp -r frontend/dist docker-build/frontend-dist
+          cp Caddyfile docker-build/
+
+      # 创建 Dockerfile
+      - name: 创建 Dockerfile
+        run: |
+          echo "FROM python:3.9-slim
+
+          # 安装系统依赖
+          RUN apt-get update && apt-get install -y curl debian-keyring debian-archive-keyring apt-transport-https
+
+          # 安装 Caddy
+          RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg && \
+              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list && \
+              apt-get update && \
+              apt-get install -y caddy
+
+          # 设置工作目录
+          WORKDIR /app
+
+          # 复制后端代码
+          COPY . /app/
+
+          # 复制前端构建文件
+          COPY frontend-dist /srv
+
+          # 复制 Caddyfile
+          COPY Caddyfile /etc/caddy/Caddyfile
+
+          # 安装 Python 依赖
+          RUN pip install --no-cache-dir -r requirements.txt
+
+          # 暴露端口
+          EXPOSE 80
+
+          # 启动服务
+          CMD caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn main:app --host 0.0.0.0 --port 8000" > docker-build/Dockerfile
+
+      # 登录到 Docker Hub
+      - name: 登录到 Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 构建并推送 Docker 镜像
+      - name: 构建并推送 Docker 镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: docker-build
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/code-share:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/code-share:${{ github.sha }}
