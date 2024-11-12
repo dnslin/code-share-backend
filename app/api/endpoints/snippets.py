@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel
@@ -163,3 +163,17 @@ def get_share_content(
             "expireAt": snippet.expire_at
         }
     )
+
+@router.get("/share/{share_link}/raw")
+def get_raw_code(
+    share_link: str,
+    access_code: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """获取原始代码内容"""
+    snippet, error = crud_snippet.get_share_link_content(db, share_link, access_code)
+    
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    
+    return Response(content=snippet.code, media_type="text/plain")
