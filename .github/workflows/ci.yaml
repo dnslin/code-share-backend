@@ -2,52 +2,48 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      # 检出后端代码
       - name: 检出后端代码
         uses: actions/checkout@v4
 
-      # 检出前端代码
       - name: 检出前端代码
         uses: actions/checkout@v4
         with:
           repository: dnslin/code-share
           path: frontend
 
-      # 设置 Node.js 环境
       - name: 设置 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      # 安装 pnpm
       - name: 安装 pnpm
         uses: pnpm/action-setup@v2
         with:
           version: latest
 
-      # 构建前端
       - name: 构建前端
         working-directory: frontend
         run: |
           pnpm install
           pnpm build
 
-      # 创建 Caddyfile
-      - name: 创建 Caddyfile
+      - name: 准备构建文件
         run: |
+          # 创建构建目录
+          mkdir -p build
+          # 复制后端文件
+          cp -r app main.py requirements.txt build/
+          # 复制前端构建文件
+          cp -r frontend/dist build/frontend-dist
+          # 创建 Caddyfile
           echo ":80 {
             handle /api/* {
               reverse_proxy localhost:8000
@@ -57,38 +53,21 @@ jobs:
               try_files {path} /index.html
               file_server
             }
-          }" > Caddyfile
+          }" > build/Caddyfile
 
-      # 准备构建文件
-      - name: 准备构建文件
-        run: |
-          mkdir -p frontend-dist
-          cp -r frontend/dist/* frontend-dist/
-
-      # 登录到 Docker Hub
       - name: 登录到 Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 设置 QEMU 用于多平台构建（可选）
-      - name: 设置 QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # 设置 Docker Buildx
-      - name: 设置 Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 构建并推送 Docker 镜像
       - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: build
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:${{ github.sha }}
-          # 添加缓存以加速构建
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -1,5 +1,5 @@
 # 构建阶段
-FROM python:3.9-slim-buster as builder
+FROM python:3.9-slim-buster AS builder
 
 # 只安装必要的构建依赖
 RUN apt-get update && apt-get install -y \
@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 最终阶段
-FROM python:3.9-slim
+FROM python:3.9-slim-buster
 
 # 安装 Caddy
 RUN apt-get update && apt-get install -y \
@@ -39,9 +39,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # 设置工作目录
 WORKDIR /app
 
-# 只复制必要的后端文件
-COPY main.py .
-COPY app/ ./app/
+# 复制应用文件
+COPY . /app/
 
 # 复制前端构建文件
 COPY frontend-dist /srv
@@ -52,5 +51,5 @@ COPY Caddyfile /etc/caddy/Caddyfile
 # 暴露端口
 EXPOSE 80
 
-# 启动服务
-CMD caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn main:app --host 0.0.0.0 --port 8000
+# 使用 JSON 格式的 CMD 指令
+CMD ["sh", "-c", "caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn main:app --host 0.0.0.0 --port 8000"]
