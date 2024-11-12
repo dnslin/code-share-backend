@@ -11,6 +11,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       # 检出后端代码
       - name: 检出后端代码
@@ -69,6 +72,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 设置 QEMU 用于多平台构建（可选）
+      - name: 设置 QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 设置 Docker Buildx
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       # 构建并推送 Docker 镜像
       - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
@@ -78,3 +89,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:${{ github.sha }}
+          # 添加缓存以加速构建
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
