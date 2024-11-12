@@ -40,7 +40,7 @@ jobs:
           # 创建构建目录
           mkdir -p build
           # 复制后端文件
-          cp -r app main.py requirements.txt build/
+          cp -r app requirements.txt build/
           # 复制前端构建文件
           cp -r frontend/dist build/frontend-dist
           # 创建 Caddyfile
