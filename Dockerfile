@@ -53,4 +53,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 80
 
 # 启动服务
-CMD ["sh", "-c", "caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn app.main:app --host 0.0.0.0 --port 8000"]
