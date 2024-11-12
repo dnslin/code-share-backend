@@ -56,60 +56,11 @@ jobs:
             }
           }" > Caddyfile
 
-      # 创建 Docker 构建上下文
-      - name: 准备 Docker 构建文件
+      # 准备构建文件
+      - name: 准备构建文件
         run: |
-          # 创建构建目录
-          mkdir -p docker-build
-          # 复制所需文件
-          cp -r * docker-build/ || true
-          cp -r frontend/dist docker-build/frontend-dist
-          cp Caddyfile docker-build/
-
-      # 创建 Dockerfile
-      - name: 创建 Dockerfile
-        run: |
-          echo "FROM python:3.9-slim
-
-          RUN apt-get update && apt-get install -y \
-              curl \
-              debian-keyring \
-              debian-archive-keyring \
-              apt-transport-https \
-              gcc \
-              python3-dev \
-              && rm -rf /var/lib/apt/lists/*
-
-          # 安装 Caddy
-          RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg && \
-              curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list && \
-              apt-get update && \
-              apt-get install -y caddy && \
-              rm -rf /var/lib/apt/lists/*
-
-          # 设置工作目录
-          WORKDIR /app
-
-          # 复制后端代码
-          COPY . /app/
-
-          # 复制前端构建文件
-          COPY frontend-dist /srv
-
-          # 复制 Caddyfile
-          COPY Caddyfile /etc/caddy/Caddyfile
-
-          # 升级 pip
-          RUN pip install --no-cache-dir --upgrade pip
-
-          # 安装 Python 依赖
-          RUN pip install --no-cache-dir -r requirements.txt
-
-          # 暴露端口
-          EXPOSE 80
-
-          # 启动服务
-          CMD caddy run --config /etc/caddy/Caddyfile --adapter caddyfile & uvicorn main:app --host 0.0.0.0 --port 8000" > docker-build/Dockerfile
+          mkdir -p frontend-dist
+          cp -r frontend/dist/* frontend-dist/
 
       # 登录到 Docker Hub
       - name: 登录到 Docker Hub
@@ -122,7 +73,7 @@ jobs:
       - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
         with:
-          context: docker-build
+          context: .
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:latest
