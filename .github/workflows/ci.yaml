@@ -43,6 +43,8 @@ jobs:
           cp -r app requirements.txt build/
           # 复制前端构建文件
           cp -r frontend/dist build/frontend-dist
+          # 复制 Dockerfile
+          cp Dockerfile build/
           # 创建 Caddyfile
           echo ":80 {
             handle /api/* {
