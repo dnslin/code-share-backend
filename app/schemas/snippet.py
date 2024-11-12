@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import Optional, List, Dict
+import re
 
 class LanguageBase(BaseModel):
     id: str
@@ -44,11 +45,53 @@ class Snippet(SnippetBase):
         from_attributes = True
 
 class ShareCodeRequest(BaseModel):
-    code: str
-    language: str
+    snippetId: str
+    accessCode: Optional[str] = None
     expireTime: str
+
+    @validator('expireTime')
+    def validate_expire_time(cls, v):
+        # 验证过期时间格式
+        pattern = r'^(\d+[hdw]|never)$'
+        if not re.match(pattern, v.lower()):
+            raise ValueError('Invalid expire time format. Use 1h, 1d, 7d, 30d or never')
+        
+        if v.lower() != 'never':
+            amount = int(v[:-1])
+            unit = v[-1].lower()
+            
+            # 验证时间范围
+            if unit == 'h' and (amount < 1 or amount > 24):
+                raise ValueError('Hours must be between 1 and 24')
+            elif unit == 'd' and (amount < 1 or amount > 30):
+                raise ValueError('Days must be between 1 and 30')
+            elif unit == 'w' and (amount < 1 or amount > 4):
+                raise ValueError('Weeks must be between 1 and 4')
+        
+        return v.lower()
 
 class ShareCodeResponse(BaseModel):
     success: bool = True
     data: dict
+
+class ShareLinkInfoResponse(BaseModel):
+    """分享链接信息响应"""
+    success: bool = True
+    data: dict = {
+        "needAccessCode": bool,
+        "expireAt": Optional[datetime],
+        "language": str
+    }
+
+class ShareLinkContentResponse(BaseModel):
+    """分享内容响应"""
+    success: bool = True
+    data: dict = {
+        "code": str,
+        "language": str,
+        "title": Optional[str],
+        "description": Optional[str],
+        "createdAt": datetime,
+        "expireAt": Optional[datetime]
+    }
   

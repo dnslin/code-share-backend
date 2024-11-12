@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api.endpoints import snippets, items
+from app.core.languages_config import LANGUAGES_CONFIG
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -17,9 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
+# 添加 /api 前缀
 app.include_router(snippets.router, prefix="/api/snippets", tags=["snippets"])
-app.include_router(items.router, prefix="/items", tags=["items"])
+app.include_router(items.router, prefix="/api/items", tags=["items"])
 
 @app.get("/")
 def read_root():
@@ -27,4 +28,12 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"} 
+    return {"status": "healthy"}
+
+@app.get("/api/languages")
+async def get_languages():
+    languages_data = dict(LANGUAGES_CONFIG)
+    return {
+        "success": True,
+        "data": languages_data
+    }
