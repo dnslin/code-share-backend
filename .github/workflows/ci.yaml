@@ -69,5 +69,3 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/code-share:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
