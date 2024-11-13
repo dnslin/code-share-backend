@@ -183,3 +183,20 @@ def get_raw_code(
         raise HTTPException(status_code=400, detail=error)
     
     return Response(content=snippet.code, media_type="text/plain")
+
+
+# 通过永久编辑地址访问代码片段
+@router.get("/{id}/edit")
+def get_edit_link(
+    id: str,
+    db: Session = Depends(get_db)
+):
+    # id 就是代码的唯一值
+    snippet = db.query(Snippet).filter(Snippet.sequence == id).first()
+    if not snippet:
+        raise HTTPException(status_code=404, detail="Snippet not found")
+    
+    return {
+        "success": True,
+        "data": snippet
+    }
