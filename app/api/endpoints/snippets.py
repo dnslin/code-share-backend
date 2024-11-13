@@ -22,6 +22,9 @@ class SnippetCreate(BaseModel):
     title: Optional[str] = None
     serial: Optional[str] = None
 
+class ShareAccessRequest(BaseModel):
+    accessCode: Optional[str] = None    
+
 @router.post("")
 async def create_or_update_snippet(
     snippet: SnippetCreate,
@@ -143,11 +146,15 @@ def get_share_info(
 @router.post("/share/{share_link}/content", response_model=ShareLinkContentResponse)
 def get_share_content(
     share_link: str,
-    access_code: Optional[str] = None,
+    request: ShareAccessRequest,
     db: Session = Depends(get_db)
 ):
     """获取分享内容"""
-    snippet, error = crud_snippet.get_share_link_content(db, share_link, access_code)
+    snippet, error = crud_snippet.get_share_link_content(
+        db, 
+        share_link, 
+        request.accessCode
+    )
     
     if error:
         raise HTTPException(status_code=400, detail=error)
@@ -163,7 +170,6 @@ def get_share_content(
             "expireAt": snippet.expire_at
         }
     )
-
 @router.get("/share/{share_link}/raw")
 def get_raw_code(
     share_link: str,
