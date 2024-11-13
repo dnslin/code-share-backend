@@ -37,6 +37,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # 设置工作目录
 WORKDIR /app
 
+# 创建数据目录
+RUN mkdir -p /app/data
+
 # 复制应用文件
 COPY . /app/
 
